@@ -18,4 +18,8 @@ export default {
       "src/views/main/style.css": "views/main/style.css",
     },
   },
+  runtime: {
+    // Closing the window keeps the menu bar count running; Quit is in the menu.
+    exitOnLastWindowClosed: false,
+  },
 } satisfies ElectrobunConfig;

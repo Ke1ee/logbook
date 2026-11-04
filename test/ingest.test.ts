@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Store } from "../src/core/db.ts";
 import { identifyFile, ingestFile, scanAll } from "../src/core/ingest.ts";
-import { overview, recentSessions } from "../src/core/stats.ts";
+import { overview, projectName, recentSessions } from "../src/core/stats.ts";
 import { assistantLine, entry, fake, SESSION_ID, userLine } from "./helpers.ts";
 
 const PROJECT = "-Users-me-app";
@@ -219,6 +219,43 @@ describe("rule changes reach stored history", () => {
     expect(changed).toBe(1);
     expect(texts()).toEqual(["plain prompt with a secret-ish word: [REDACTED:test]"]);
     expect(store.reRedact("next-rules", () => "should not run")).toBe(0);
+  });
+});
+
+describe("fix-ups for rows stored by older versions", () => {
+  test("misfiled prompts are reclassified once, on open", () => {
+    const insert = store.db.query(
+      "INSERT INTO events (file, line_offset, block, session_id, kind, text) VALUES ('f', ?, 0, 's', 'prompt', ?)",
+    );
+    [
+      "This session is being continued from a previous conversation that ran out of context. The summary…",
+      "Another Claude session sent a message:\n<teammate-message teammate_id=\"t\">hi",
+      "Another Claude session sent a message:\n<agent-message from=\"a\">hi",
+      "Another Claude session sent a message: what did it say?",
+      "this session is being continued from a previous conversation? why",
+      "A real prompt",
+    ].forEach((text, i) => insert.run(i + 1, text));
+    store.setMeta("fixups_applied", "0");
+    store.close();
+    store = new Store(dbFile);
+    const rows = store.db.query("SELECT kind, name FROM events WHERE file = 'f' ORDER BY line_offset").all();
+    expect(rows).toEqual([
+      { kind: "system", name: "compact_summary" },
+      { kind: "system", name: "peer_message" },
+      { kind: "system", name: "peer_message" },
+      { kind: "prompt", name: null },
+      { kind: "prompt", name: null },
+      { kind: "prompt", name: null },
+    ]);
+  });
+});
+
+describe("projectName", () => {
+  test("worktrees are named after their repo", () => {
+    expect(projectName("/Users/me/Desktop/hangarops/.claude/worktrees/agent-af94650", "x")).toBe("hangarops");
+    expect(projectName("/Users/me/app/.git/worktrees/feature/sub", "x")).toBe("app");
+    expect(projectName("/Users/me/app", "x")).toBe("app");
+    expect(projectName(null, "-Users-me-app")).toBe("Users-me-app");
   });
 });
 

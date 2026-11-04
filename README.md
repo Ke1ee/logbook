@@ -6,7 +6,15 @@ When most of your code is written by several agent sessions at once, the code mo
 
 ## Status
 
-Chunk 1 of 6 is done: ingestion and a status window. See the [roadmap](#roadmap).
+Chunks 1 and 2 of 6 are done: ingestion, and a live board of running agents. See the [roadmap](#roadmap).
+
+## The live board
+
+The window opens on every running agent, the ones waiting on you first: which need you (blocked on a question or a permission), which are done and unread, and what each working one is doing right now, in plain English ("Run the test suite", "Editing core/db.ts", "Subagent: Reading docs.stripe.com"), with your last prompt and any recent tool errors.
+
+- With [herdr](https://herdr.dev), the list of agents and their states come from herdr, which watches the terminals. Each agent is matched to its transcript by title and directory, and "jump to agent" focuses its pane. Without herdr, the board shows sessions active in the last 30 minutes and infers working or idle from recency.
+- A menu bar item shows how many agents are waiting on you, with one click to each. If you replace the menu bar (SketchyBar and friends), Logbook also writes `status.json` to its data folder and fires a SketchyBar `logbook_update` event with `WAITING=<n>` whenever the count changes.
+- "Plain English" comes from the tool calls themselves (Claude's shell commands carry a one-line description). No model is called yet.
 
 ## How it works
 
@@ -64,7 +72,7 @@ Electrobun 2.x's `init` command installs a global `hutch` launcher and appends a
 ## Roadmap
 
 1. **Ingestion and status window.** Done.
-2. **Live board.** What every running agent is doing in plain English, and which one is waiting on you, with a menu bar count.
+2. **Live board.** Done: what every running agent is doing in plain English, which ones are waiting on you, a menu bar count, and a jump to the agent.
 3. **Session cards and a daily digest.** Claude Haiku summarizes each session as it runs; Claude Opus writes the digest through the Batch API.
 4. **The reviewer.** Questions about each pull request's diff, graded against the code, with spaced repetition and a list of what you shipped but never explained.
 5. **Production context.** Deploys, runtime errors and schema changes linked back to the sessions that caused them.
