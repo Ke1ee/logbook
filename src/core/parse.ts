@@ -110,6 +110,27 @@ const HARNESS_TEXT =
   /^\s*<(?:system-reminder|local-command-stdout|local-command-stderr|local-command-caveat|bash-stdout|bash-stderr|task-notification|user-prompt-submit-hook)\b/;
 const COMMAND_TEXT = /^\s*<(?:command-name|command-message|command-args|bash-input)\b/;
 const INTERRUPT_TEXT = /^\s*\[Request interrupted/;
+/**
+ * Text Claude Code injects as if the user had sent it. These predicates are
+ * shared with the database fix-ups in db.ts, so old rows and new rows are
+ * classified the same way. Matching is case-sensitive and anchored on the
+ * exact wording, so a person's prompt that merely resembles it stays a prompt.
+ */
+export const COMPACTION_OPENING = "This session is being continued from a previous conversation that ran out of context.";
+export const PEER_OPENING = "Another Claude session sent a message:";
+/** The tag wrapping a relayed message right after the opening line (agent hand-backs, agent teams). */
+export const PEER_MARKERS = ["<agent-message", "<teammate-message"] as const;
+
+export function isCompactionSummary(text: string): boolean {
+  return text.trimStart().startsWith(COMPACTION_OPENING);
+}
+
+export function isPeerMessage(text: string): boolean {
+  const trimmed = text.trimStart();
+  if (!trimmed.startsWith(PEER_OPENING)) return false;
+  const rest = trimmed.slice(PEER_OPENING.length).trimStart();
+  return PEER_MARKERS.some((marker) => rest.startsWith(marker));
+}
 
 type Json = Record<string, unknown>;
 
@@ -206,6 +227,14 @@ function userEvents(entry: Json, ts: string | null): ParsedEvent[] {
     if (block.type === "text" && typeof block.text === "string") {
       const text = block.text;
       if (meta || HARNESS_TEXT.test(text)) return;
+      // Neither is something a person typed. The compaction summary is kept:
+      // it is Claude's own account of the conversation so far.
+      const compaction = entry.isCompactSummary === true || isCompactionSummary(text);
+      if (compaction || isPeerMessage(text)) {
+        const name = compaction ? "compact_summary" : "peer_message";
+        events.push(event("system", index, uuid, ts, sidechain, { name, text: safe(text, LIMITS.prose), size: text.length }));
+        return;
+      }
       const kind: EventKind = sidechain
         ? "subagent_prompt"
         : COMMAND_TEXT.test(text)
@@ -281,7 +310,9 @@ export function describeToolInput(name: string, input: Json): string {
 
   switch (name) {
     case "Bash":
-      return `$ ${s(input.command)}${input.description ? `\n# ${s(input.description)}` : ""}`;
+      // The description goes first: it is the plain-English line the board shows,
+      // and it must survive truncation of a long command.
+      return `${input.description ? `# ${s(input.description)}\n` : ""}$ ${s(input.command)}`;
     case "Edit":
       return `${s(input.file_path)}${input.replace_all ? " (replace all)" : ""}\n--- before\n${s(input.old_string)}\n+++ after\n${s(input.new_string)}`;
     case "MultiEdit": {

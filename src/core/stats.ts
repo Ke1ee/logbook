@@ -78,8 +78,15 @@ export function recentSessions(store: Store, limit = 20): SessionSummary[] {
   return rows.map((row) => ({ ...row, name: projectName(row.cwd, row.project) }));
 }
 
-/** A readable project name: the working directory's folder, else the encoded transcript folder. */
+/**
+ * A readable project name: the working directory's folder, else the encoded
+ * transcript folder. Agents often work in a worktree inside the repo
+ * (<repo>/.claude/worktrees/agent-x); those are named after the repo.
+ */
 export function projectName(cwd: string | null, project: string): string {
-  if (cwd) return basename(cwd) || cwd;
+  if (cwd) {
+    const root = cwd.replace(/\/\.(?:claude|git)\/worktrees\/[^/]+(?:\/.*)?$/, "").replace(/\/+$/, "");
+    return basename(root) || root || cwd;
+  }
   return project.replace(/^-+/, "") || project;
 }

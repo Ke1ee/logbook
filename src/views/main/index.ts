@@ -5,6 +5,7 @@
  * text nodes, never innerHTML.
  */
 import { Electroview } from "electrobun/view";
+import type { BoardItem } from "../../core/board.ts";
 import type { SessionSummary } from "../../core/stats.ts";
 import type { LogbookRPC, Snapshot } from "../../shared/rpc.ts";
 
@@ -63,10 +64,65 @@ function render(snapshot: Snapshot): void {
         .map((u) => u.type)
         .join(", ")}). Nothing breaks; those lines just aren't shown.`;
 
+  const { board } = snapshot;
+  const waiting = board.items.filter((item) => item.status === "blocked" || item.status === "done").length;
+  text(
+    "#live-meta",
+    [waiting ? `${waiting} waiting on you` : null, board.source === "herdr" ? "via herdr" : "from transcripts"]
+      .filter(Boolean)
+      .join(" · "),
+  );
+  must<HTMLElement>("#board").replaceChildren(
+    ...(board.items.length
+      ? board.items.map(liveCard)
+      : [h("p", { class: "empty" }, board.source === "herdr" ? "No agents running in herdr." : "No agent activity in the last 30 minutes.")]),
+  );
+
   const list = must<HTMLElement>("#sessions");
   list.replaceChildren(
     ...(sessions.length ? sessions.map(card) : [h("p", { class: "empty" }, "No agent sessions yet. Start one in a terminal.")]),
   );
+}
+
+const STATUS_LABEL: Record<BoardItem["status"], string> = {
+  blocked: "needs you",
+  done: "done",
+  working: "working",
+  idle: "idle",
+  unknown: "unknown",
+};
+
+function liveCard(item: BoardItem): HTMLElement {
+  return h(
+    "article",
+    { class: `session live ${item.status}` },
+    h("div", { class: "title" }, h("span", { class: `chip ${item.status}` }, STATUS_LABEL[item.status]), item.title),
+    item.action ? h("div", { class: "action" }, actionLine(item)) : null,
+    item.lastPrompt ? h("div", { class: "asked" }, `You asked: ${item.lastPrompt}`) : null,
+    h(
+      "div",
+      { class: "where" },
+      [item.project, item.branch, ago(item.actionAt)].filter(Boolean).join(" · "),
+      item.recentErrors ? h("span", { class: "errors" }, ` · ${plural(item.recentErrors, "error")} in 30m`) : null,
+    ),
+    item.paneId || item.prUrl
+      ? h("div", { class: "buttons" }, item.paneId ? jumpButton(item.paneId) : null, item.prUrl ? prButton(item.prUrl) : null)
+      : null,
+  );
+}
+
+/** Tense follows state: what it is doing while working, what it did or wants otherwise. */
+function actionLine(item: BoardItem): string {
+  const action = item.action ?? "";
+  if (item.status === "working") return action;
+  if (item.status === "blocked") return item.pending ? `Wants to: ${action}` : `Waiting on you after: ${action}`;
+  return item.actionIsReply ? `Said: ${action}` : `Last: ${action}`;
+}
+
+function jumpButton(paneId: string): HTMLElement {
+  const button = h("button", { class: "pr jump", type: "button", title: "Focus this agent in herdr" }, "jump to agent");
+  button.addEventListener("click", () => void rpc.request.focusAgent({ paneId }));
+  return button;
 }
 
 function card(s: SessionSummary): HTMLElement {

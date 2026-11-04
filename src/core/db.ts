@@ -14,7 +14,7 @@
 import { Database } from "bun:sqlite";
 import { chmodSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import type { ParsedLine, SessionPatch } from "./parse.ts";
+import { COMPACTION_OPENING, PEER_MARKERS, PEER_OPENING, type ParsedLine, type SessionPatch } from "./parse.ts";
 import { REDACTION_FINGERPRINT, redact } from "./redact.ts";
 
 export const SCHEMA_VERSION = 1;
@@ -85,6 +85,8 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE INDEX IF NOT EXISTS events_session_kind ON events (session_id, kind);
 CREATE INDEX IF NOT EXISTS events_session_ts ON events (session_id, ts);
 CREATE INDEX IF NOT EXISTS events_ts ON events (ts);
+-- The live board asks "has this tool call returned yet?" for each running agent.
+CREATE INDEX IF NOT EXISTS events_tool_use_id ON events (tool_use_id);
 
 -- Entry types the parser has never seen: the early warning for format drift.
 CREATE TABLE IF NOT EXISTS unknown_types (
@@ -95,6 +97,34 @@ CREATE TABLE IF NOT EXISTS unknown_types (
   sample_file TEXT
 );
 `;
+
+/**
+ * Append only: each entry runs once per database, in order. Predicates mirror
+ * isCompactionSummary / isPeerMessage in parse.ts exactly: case-sensitive
+ * (SQLite `=` compares bytes; LIKE would not), anchored, same constants.
+ */
+const LEADING_SPACE = "' ' || char(9) || char(10) || char(13)";
+const BODY = `ltrim(text, ${LEADING_SPACE})`;
+const AFTER_OPENING = `ltrim(substr(${BODY}, length($opening) + 1), ${LEADING_SPACE})`;
+const FIXUPS: ReadonlyArray<(db: Database) => void> = [
+  // Compaction summaries were stored as prompts.
+  (db) =>
+    db
+      .query(
+        `UPDATE events SET kind = 'system', name = 'compact_summary'
+          WHERE kind = 'prompt' AND substr(${BODY}, 1, length($opening)) = $opening`,
+      )
+      .run({ opening: COMPACTION_OPENING }),
+  // Messages relayed from other Claude sessions were stored as prompts.
+  (db) =>
+    db
+      .query(
+        `UPDATE events SET kind = 'system', name = 'peer_message'
+          WHERE kind = 'prompt' AND substr(${BODY}, 1, length($opening)) = $opening
+            AND (substr(${AFTER_OPENING}, 1, length($a)) = $a OR substr(${AFTER_OPENING}, 1, length($b)) = $b)`,
+      )
+      .run({ opening: PEER_OPENING, a: PEER_MARKERS[0], b: PEER_MARKERS[1] }),
+];
 
 export interface FileState {
   path: string;
@@ -193,7 +223,24 @@ export class Store {
     retryBusy(() => db.exec(SCHEMA));
     this.db = db;
     retryBusy(() => this.setMeta("schema_version", String(SCHEMA_VERSION)));
+    this.applyFixups();
     this.reRedact(REDACTION_FINGERPRINT, redact);
+  }
+
+  /**
+   * One-time corrections to rows stored by older parser versions, applied in
+   * order and recorded, so history matches what the current parser would
+   * produce without re-reading transcripts Claude Code may already have deleted.
+   */
+  private applyFixups(): void {
+    const applied = Number(this.getMeta("fixups_applied") ?? 0);
+    if (applied >= FIXUPS.length) return;
+    this.db
+      .transaction(() => {
+        for (const fixup of FIXUPS.slice(applied)) fixup(this.db);
+        this.setMeta("fixups_applied", String(FIXUPS.length));
+      })
+      .immediate();
   }
 
   /**

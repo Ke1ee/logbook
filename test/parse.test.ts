@@ -99,6 +99,34 @@ describe("user entries", () => {
     expect(ok(parseLine(userLine("Skill body injected by the harness", { isMeta: true }), FILE_SESSION)).events).toHaveLength(0);
   });
 
+  test("compaction summaries and relayed session messages are not prompts", () => {
+    const summary = only(
+      ok(
+        parseLine(
+          userLine("This session is being continued from a previous conversation that ran out of context.", {
+            isCompactSummary: true,
+          }),
+          FILE_SESSION,
+        ),
+      ).events,
+    );
+    expect(summary).toMatchObject({ kind: "system", name: "compact_summary" });
+    for (const marker of ["<agent-message from=\"x\">", "<teammate-message teammate_id=\"y\">"]) {
+      const peer = only(ok(parseLine(userLine(`Another Claude session sent a message:\n${marker}hi`), FILE_SESSION)).events);
+      expect(peer).toMatchObject({ kind: "system", name: "peer_message" });
+    }
+  });
+
+  test("prompts that merely resemble injected text stay prompts", () => {
+    for (const text of [
+      "this session is being continued from a previous conversation? why did it lose my context",
+      "ANOTHER CLAUDE SESSION SENT A MESSAGE to the wrong pane, can you check",
+      "Another Claude session sent a message: can you tell me what it said?",
+    ]) {
+      expect(only(ok(parseLine(userLine(text), FILE_SESSION)).events).kind).toBe("prompt");
+    }
+  });
+
   test("text inside a subagent transcript is the parent's task, not a person", () => {
     const ev = only(ok(parseLine(userLine("Audit the auth middleware", { isSidechain: true }), FILE_SESSION)).events);
     expect(ev.kind).toBe("subagent_prompt");
@@ -146,7 +174,7 @@ describe("assistant entries", () => {
     const call = parsed.events[1] as ParsedEvent;
     expect(call.name).toBe("Bash");
     expect(call.toolUseId).toBe("t-9");
-    expect(call.text).toBe("$ bun test\n# Run tests");
+    expect(call.text).toBe("# Run tests\n$ bun test");
   });
 
   test("an Edit shows the file and the change", () => {

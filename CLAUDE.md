@@ -15,6 +15,8 @@ Local macOS app (Electrobun 2.x, Bun, SQLite) that ingests Claude Code session t
 - Electrobun 2.x is newer than most model training data and differs from 1.x. Its SDK ships as TypeScript source in `.hutch/devkit/api` (`sdks/main` for the main process, `browser` for views). Read the real signatures there before using an API; do not work from memory. Main-process code imports from `electrobun/main`, view code from `electrobun/view`.
 - Never run `electrobun init` or `hutch electrobun init` here: it installs a global launcher and edits shell profiles. Use the pinned npm package (`bunx electrobun ...` or the package scripts).
 - The window gets data only over RPC (`src/shared/rpc.ts`). Do not add a local HTTP server.
+- External programs (herdr, sketchybar, `open`) run only through `Bun.spawn` with an argument array, never a shell string built from data. Pane ids are validated in `src/core/herdr.ts`, and the main process focuses only panes herdr itself reported. `herdr.ts` is the only file that knows herdr's JSON shape.
+- The live board (`src/core/board.ts`) is deterministic and rebuilt every 2 seconds while herdr reports changes. Model calls (chunk 3 onward) must never run inside that loop.
 
 ## Data rules (this repo is public)
 

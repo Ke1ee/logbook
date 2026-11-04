@@ -69,11 +69,108 @@ h1 {
   font-size: 12px;
 }
 
-main {
+.list {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 0 16px 16px;
+  padding: 0 16px 8px;
+}
+
+h2.section {
+  margin: 14px 16px 8px;
+  color: var(--subtext);
+  font: 600 11px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h2.section .meta {
+  margin-left: 6px;
+  color: var(--muted);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.chip {
+  flex: none;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--subtext);
+  font: 600 10px var(--mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.chip.blocked {
+  border-color: var(--pink);
+  background: var(--pink);
+  color: var(--bg);
+}
+
+.chip.done {
+  border-color: var(--pink);
+  color: var(--pink-light);
+}
+
+.chip.working {
+  color: var(--text-2);
+}
+
+.chip.working::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: var(--pink);
+  vertical-align: 1px;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip.working::before {
+    animation: none;
+  }
+}
+
+.live.blocked {
+  border-color: var(--pink);
+  box-shadow: inset 0 0 0 1px var(--pink);
+}
+
+.live.done {
+  border-color: var(--pink);
+}
+
+.live.idle,
+.live.unknown {
+  opacity: 0.75;
+}
+
+.action {
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.asked {
+  margin-top: 2px;
+  color: var(--subtext);
+  font-size: 12px;
+}
+
+.buttons {
+  display: flex;
+  gap: 6px;
 }
 
 .session {
