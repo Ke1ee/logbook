@@ -1,0 +1,24 @@
+{
+  // Editor and app typecheck. Electrobun 2.x ships its SDK as source in
+  // .hutch/devkit (run `bun run sync` first). Its generated tsconfig sets
+  // baseUrl, which TypeScript 7 rejects, so the import paths are mapped here.
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["bun"],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "paths": {
+      "electrobun": ["./.hutch/devkit/api/sdks/main/index.ts"],
+      "electrobun/main": ["./.hutch/devkit/api/sdks/main/index.ts"],
+      "electrobun/view": ["./.hutch/devkit/api/browser/index.ts"]
+    }
+  },
+  "include": ["src", "test", "electrobun.config.ts"]
+}

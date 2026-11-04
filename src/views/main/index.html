@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Defense in depth: transcript text is only ever inserted as text nodes, but if that ever
+         regresses, injected script must not run or reach Electrobun's internal RPC handlers. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src ws://127.0.0.1:*; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'"
+    />
+    <title>Logbook</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="index.js" type="module"></script>
+  </head>
+  <body>
+    <header class="electrobun-webkit-app-region-drag">
+      <h1>Logbook</h1>
+      <p id="summary">Loading…</p>
+      <p id="status" class="status"></p>
+    </header>
+    <p id="problem" class="drift" hidden></p>
+    <p id="drift" class="drift" hidden></p>
+    <main id="sessions" aria-live="polite"></main>
+    <footer>Everything stays on this Mac, in ~/Library/Application Support/logbook.</footer>
+  </body>
+</html>

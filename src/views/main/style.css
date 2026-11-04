@@ -1,0 +1,149 @@
+/* Monopink: greys carry structure, pink carries meaning. */
+:root {
+  --bg: #08080a;
+  --surface: #1a1a1f;
+  --surface-2: #26262c;
+  --border: #3a3a42;
+  --muted: #5c5c66;
+  --subtext: #8a8a96;
+  --text-2: #b8b8c2;
+  --text: #e8e8ec;
+  --pink: #ff2d78;
+  --pink-bright: #ff5c97;
+  --pink-light: #ff8fb8;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 34px 16px 12px;
+  background: linear-gradient(var(--bg) 85%, transparent);
+}
+
+h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+#summary,
+.status {
+  margin: 2px 0 0;
+  color: var(--subtext);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.status::before {
+  content: "● ";
+  color: var(--muted);
+}
+
+.status.live::before {
+  color: var(--pink);
+}
+
+.drift {
+  margin: 0 16px 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--pink);
+  border-radius: 6px;
+  color: var(--pink-light);
+  font-size: 12px;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+
+.session {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.session.active {
+  border-color: var(--pink);
+}
+
+.title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pink);
+  box-shadow: 0 0 8px var(--pink);
+}
+
+.where,
+.numbers {
+  margin-top: 3px;
+  color: var(--subtext);
+  font-size: 12px;
+}
+
+.numbers {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.errors {
+  color: var(--pink-bright);
+}
+
+.pr {
+  margin-top: 8px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font: 11px var(--mono);
+  cursor: pointer;
+}
+
+.pr:hover {
+  border-color: var(--pink);
+  color: var(--text);
+}
+
+.empty {
+  color: var(--subtext);
+  text-align: center;
+  padding: 40px 0;
+}
+
+footer {
+  padding: 8px 16px 20px;
+  color: var(--muted);
+  font-size: 11px;
+}

@@ -1,0 +1,21 @@
+# dependencies and generated toolchain state
+node_modules/
+.hutch/
+build/
+artifacts/
+dist/
+
+# Session data never belongs in this repo. Logbook keeps its database in
+# ~/Library/Application Support/logbook; these patterns are a second fence.
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.jsonl
+.env
+.env.*
+!.env.example
+
+# OS and editor
+.DS_Store
+*.log
